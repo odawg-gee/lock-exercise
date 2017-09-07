@@ -6,9 +6,15 @@ namespace LockSandbox.Services
 {
     internal class TokenService : ITokenService
     {
-        public Task<TestModel> CallEndPoint()
+        public async Task<TestModel> CallEndPoint()
         {
-            return Task.FromResult(new TestModel());
+            var task = Task.Run(() =>
+            {
+                System.Threading.Thread.Sleep(5000);
+                return new TestModel();
+            });
+            
+            return await task.ConfigureAwait(false);
         }
     }
 }

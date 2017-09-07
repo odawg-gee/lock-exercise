@@ -9,7 +9,7 @@ namespace LockSandbox.Services
     {
         private readonly ICacheService _cacheService;
         private readonly ITokenService _tokenService;
-        private static readonly object SyncLock = new object();
+        private static readonly SemaphoreSlim Locker = new SemaphoreSlim(1,1);
 
         internal TestService()
         { }
@@ -23,26 +23,25 @@ namespace LockSandbox.Services
 
         public async Task<TestModel> GetModel()
         {
-            var lockTaken = false;
             try
             {
-                Monitor.Enter(SyncLock, ref lockTaken);
+                await Locker.WaitAsync();
 
                 var cacheData = _cacheService.GetCache<TestModel>("TestKey");
 
                 if (cacheData != null)
                     return cacheData;
 
-                var response = await _tokenService.CallEndPoint();
-
-                Thread.Sleep(1000);
+                var response = await _tokenService
+                    .CallEndPoint();
+                
                 _cacheService.SetCache(response, "TestKey", 3600);
 
                 return response;
             }
             finally
             {
-                if (lockTaken) Monitor.Exit(SyncLock);
+                Locker.Release();
             }
         }
     }
